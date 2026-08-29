@@ -1,37 +1,57 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
-require("dotenv").config();
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+require('dotenv').config();
 
-const authRoutes = require("./routes/authRoutes");
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 
+app.use(cors());
 app.use(express.json());
 
-app.use(
-  cors({
-    origin: "*",
-  })
-);
-
-app.use("/api/auth", authRoutes);
-
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => console.log("MongoDB Connected"))
-  .catch((err) => console.log("MongoDB Error:", err));
-
-app.get("/", (req, res) => {
-  res.send("Backend Server Running");
+app.get('/', (req, res) => {
+  res.send('Backend Server Running');
 });
 
-if (require.main === module) {
-  const PORT = process.env.PORT || 5000;
+// Cached connection state — avoids reconnecting on every serverless invocation
+let isConnected = false;
 
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+const connectDB = async () => {
+  if (isConnected) return;
+
+  await mongoose.connect(process.env.MONGODB_URI);
+  isConnected = true;
+  console.log('MongoDB Connected');
+};
+
+// Ensure DB is connected before any /api/auth request is handled.
+// This fixes cold-start "buffering timed out" errors on Vercel.
+app.use('/api/auth', async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error('MongoDB connection failed:', error);
+    res.status(500).json({ message: 'Database connection failed' });
+  }
+});
+
+app.use('/api/auth', authRoutes);
+
+const PORT = process.env.PORT || 5000;
+
+// app.listen() only runs locally — Vercel manages the server itself via the export below
+if (require.main === module) {
+  connectDB()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+      });
+    })
+    .catch((error) => {
+      console.error('MongoDB connection failed:', error);
+    });
 }
 
 module.exports = app;
