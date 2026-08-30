@@ -28,12 +28,6 @@ const userSchema = new mongoose.Schema(
       enum: ["customer", "worker", "admin"],
       default: "customer",
     },
-
-    specialization: {
-      type: String,
-      enum: ["Billing", "Account", "Technical", "Orders", "General"],
-      default: null,
-    },
   },
   {
     timestamps: true,
