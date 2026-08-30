@@ -1,3 +1,4 @@
+
 const mongoose = require("mongoose");
 
 const ticketSchema = new mongoose.Schema(
@@ -24,8 +25,8 @@ const ticketSchema = new mongoose.Schema(
 
     category: {
       type: String,
+      enum: ["Billing", "Account", "Technical", "Orders", "General"],
       required: true,
-      trim: true,
     },
 
     priority: {
@@ -36,8 +37,8 @@ const ticketSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["Pending", "Accepted", "In Progress", "Completed"],
-      default: "Pending",
+      enum: ["New", "Assigned", "In Progress", "Completed"],
+      default: "New",
     },
 
     customer: {
@@ -64,3 +65,4 @@ const ticketSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model("Ticket", ticketSchema);
+

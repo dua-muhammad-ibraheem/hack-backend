@@ -1,34 +1,37 @@
+
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
-const reviewRoutes = require("./routes/reviewRoutes");
+
 const authRoutes = require("./routes/authRoutes");
 const ticketRoutes = require("./routes/ticketRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
-app.use("/api/reviews", reviewRoutes);
+
 app.get("/", (req, res) => {
   res.send("Backend Server Running");
 });
 
-// Cached connection state
+// MongoDB connection
 let isConnected = false;
 
 const connectDB = async () => {
   if (isConnected) return;
 
   await mongoose.connect(process.env.MONGODB_URI);
+
   isConnected = true;
 
   console.log("MongoDB Connected");
 };
 
-// Connect DB before auth requests
-app.use("/api/auth", async (req, res, next) => {
+// Connect DB before API requests
+app.use(async (req, res, next) => {
   try {
     await connectDB();
     next();
@@ -43,6 +46,7 @@ app.use("/api/auth", async (req, res, next) => {
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/tickets", ticketRoutes);
 
 const PORT = process.env.PORT || 5000;
@@ -61,3 +65,4 @@ if (require.main === module) {
 }
 
 module.exports = app;
+

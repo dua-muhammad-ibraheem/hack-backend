@@ -76,8 +76,7 @@ const loginUser = async (req, res) => {
         message: 'Invalid email or password',
       });
     }
-
-    const token = jwt.sign(
+const token = jwt.sign(
   {
     userId: user._id,
     role: user.role,
