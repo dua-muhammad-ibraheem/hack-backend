@@ -1,4 +1,3 @@
-
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
@@ -28,6 +27,11 @@ const userSchema = new mongoose.Schema(
       enum: ["customer", "worker", "admin"],
       default: "customer",
     },
+
+    workerCategories: {
+      type: [String],
+      default: [],
+    },
   },
   {
     timestamps: true,
@@ -35,4 +39,3 @@ const userSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model("User", userSchema);
-

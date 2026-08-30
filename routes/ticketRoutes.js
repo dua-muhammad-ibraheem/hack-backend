@@ -1,6 +1,8 @@
 const express = require("express");
 
 const Ticket = require("../models/Ticket");
+const User = require("../models/User");
+
 const authMiddleware = require("../middleware/authMiddleware");
 const roleMiddleware = require("../middleware/roleMiddleware");
 
@@ -8,21 +10,21 @@ const router = express.Router();
 
 
 // =====================================================
-// CUSTOMER ROUTES
+// CUSTOMER
 // =====================================================
 
-// Create Ticket
+// Create Complaint / Request
 router.post(
   "/",
   authMiddleware,
   roleMiddleware("customer"),
   async (req, res) => {
     try {
-      const { subject, description, category } = req.body;
+      const { subject, description, category, priority } = req.body;
 
-      if (!subject || !description) {
+      if (!subject || !description || !category) {
         return res.status(400).json({
-          message: "Subject and description are required",
+          message: "Subject, description and category are required",
         });
       }
 
@@ -38,25 +40,121 @@ router.post(
         });
       }
 
-      const ticketNumber = `TKT-${Date.now()}`;
-
       const ticket = await Ticket.create({
-        ticketNumber,
+        ticketNumber: `TKT-${Date.now()}`,
         subject: subject.trim(),
         description: description.trim(),
-        category: category || "General",
+        category: category.trim(),
+        priority: priority || "Medium",
         customer: req.user.userId,
       });
 
       res.status(201).json({
-        message: "Ticket created successfully",
+        message: "Request created successfully",
         ticket,
       });
     } catch (error) {
       console.error("Create ticket error:", error);
 
       res.status(500).json({
-        message: "Failed to create ticket",
+        message: "Failed to create request",
+      });
+    }
+  }
+);
+
+
+// Get Workers Available For Category
+router.get(
+  "/workers",
+  authMiddleware,
+  roleMiddleware("customer"),
+  async (req, res) => {
+    try {
+      const { category } = req.query;
+
+      if (!category) {
+        return res.status(400).json({
+          message: "Category is required",
+        });
+      }
+
+      const workers = await User.find({
+        role: "worker",
+        workerCategories: category,
+      }).select("_id name email workerCategories");
+
+      res.status(200).json({
+        workers,
+      });
+    } catch (error) {
+      console.error("Get workers error:", error);
+
+      res.status(500).json({
+        message: "Failed to fetch workers",
+      });
+    }
+  }
+);
+
+
+// Assign Worker To My Ticket
+router.put(
+  "/my-tickets/:id/assign-worker",
+  authMiddleware,
+  roleMiddleware("customer"),
+  async (req, res) => {
+    try {
+      const { workerId } = req.body;
+
+      if (!workerId) {
+        return res.status(400).json({
+          message: "Worker is required",
+        });
+      }
+
+      const ticket = await Ticket.findOne({
+        _id: req.params.id,
+        customer: req.user.userId,
+      });
+
+      if (!ticket) {
+        return res.status(404).json({
+          message: "Ticket not found",
+        });
+      }
+
+      if (ticket.status !== "Pending") {
+        return res.status(400).json({
+          message: "Only pending requests can be assigned",
+        });
+      }
+
+      const worker = await User.findOne({
+        _id: workerId,
+        role: "worker",
+        workerCategories: ticket.category,
+      });
+
+      if (!worker) {
+        return res.status(400).json({
+          message: "Selected worker is not available for this category",
+        });
+      }
+
+      ticket.assignedWorker = worker._id;
+
+      await ticket.save();
+
+      res.status(200).json({
+        message: "Worker assigned successfully",
+        ticket,
+      });
+    } catch (error) {
+      console.error("Assign worker error:", error);
+
+      res.status(500).json({
+        message: "Failed to assign worker",
       });
     }
   }
@@ -112,7 +210,7 @@ router.get(
         ticket,
       });
     } catch (error) {
-      console.error("Get single ticket error:", error);
+      console.error("Get ticket error:", error);
 
       res.status(500).json({
         message: "Failed to fetch ticket",
@@ -122,14 +220,14 @@ router.get(
 );
 
 
-// Update My Ticket
+// Update My Pending Ticket
 router.put(
   "/my-tickets/:id",
   authMiddleware,
   roleMiddleware("customer"),
   async (req, res) => {
     try {
-      const { subject, description, category } = req.body;
+      const { subject, description, category, priority } = req.body;
 
       const ticket = await Ticket.findOne({
         _id: req.params.id,
@@ -142,9 +240,9 @@ router.put(
         });
       }
 
-      if (ticket.status !== "New") {
+      if (ticket.status !== "Pending") {
         return res.status(400).json({
-          message: "Only new tickets can be updated",
+          message: "Only pending requests can be updated",
         });
       }
 
@@ -169,20 +267,25 @@ router.put(
       }
 
       if (category !== undefined) {
-        ticket.category = category;
+        ticket.category = category.trim();
+        ticket.assignedWorker = null;
+      }
+
+      if (priority !== undefined) {
+        ticket.priority = priority;
       }
 
       await ticket.save();
 
       res.status(200).json({
-        message: "Ticket updated successfully",
+        message: "Request updated successfully",
         ticket,
       });
     } catch (error) {
       console.error("Update ticket error:", error);
 
       res.status(500).json({
-        message: "Failed to update ticket",
+        message: "Failed to update request",
       });
     }
   }
@@ -208,13 +311,13 @@ router.delete(
       }
 
       res.status(200).json({
-        message: "Ticket deleted successfully",
+        message: "Request deleted successfully",
       });
     } catch (error) {
       console.error("Delete ticket error:", error);
 
       res.status(500).json({
-        message: "Failed to delete ticket",
+        message: "Failed to delete request",
       });
     }
   }
@@ -222,10 +325,10 @@ router.delete(
 
 
 // =====================================================
-// WORKER ROUTES
+// WORKER
 // =====================================================
 
-// Get Assigned Tickets
+// Get Assigned Requests
 router.get(
   "/worker-tickets",
   authMiddleware,
@@ -245,14 +348,14 @@ router.get(
       console.error("Get worker tickets error:", error);
 
       res.status(500).json({
-        message: "Failed to fetch assigned tickets",
+        message: "Failed to fetch worker requests",
       });
     }
   }
 );
 
 
-// Worker Accept Ticket
+// Accept Request
 router.put(
   "/:id/accept",
   authMiddleware,
@@ -266,36 +369,36 @@ router.put(
 
       if (!ticket) {
         return res.status(404).json({
-          message: "Ticket not found or not assigned to you",
+          message: "Request not found or not assigned to you",
         });
       }
 
-      if (ticket.status !== "Assigned") {
+      if (ticket.status !== "Pending") {
         return res.status(400).json({
-          message: "This ticket cannot be accepted",
+          message: "Only pending requests can be accepted",
         });
       }
 
-      ticket.status = "In Progress";
+      ticket.status = "Accepted";
 
       await ticket.save();
 
       res.status(200).json({
-        message: "Ticket accepted successfully",
+        message: "Request accepted",
         ticket,
       });
     } catch (error) {
-      console.error("Accept ticket error:", error);
+      console.error("Accept request error:", error);
 
       res.status(500).json({
-        message: "Failed to accept ticket",
+        message: "Failed to accept request",
       });
     }
   }
 );
 
 
-// Worker Reject Ticket
+// Reject Request Permanently
 router.delete(
   "/:id/reject",
   authMiddleware,
@@ -305,31 +408,75 @@ router.delete(
       const ticket = await Ticket.findOneAndDelete({
         _id: req.params.id,
         assignedWorker: req.user.userId,
+        status: "Pending",
       });
 
       if (!ticket) {
         return res.status(404).json({
-          message: "Ticket not found or not assigned to you",
+          message: "Request not found or cannot be rejected",
         });
       }
 
       res.status(200).json({
-        message: "Ticket rejected and permanently deleted",
+        message: "Request rejected permanently",
       });
     } catch (error) {
-      console.error("Reject ticket error:", error);
+      console.error("Reject request error:", error);
 
       res.status(500).json({
-        message: "Failed to reject ticket",
+        message: "Failed to reject request",
       });
     }
   }
 );
 
 
-// Worker Resolve Ticket
+// Start Request
 router.put(
-  "/:id/resolve",
+  "/:id/start",
+  authMiddleware,
+  roleMiddleware("worker"),
+  async (req, res) => {
+    try {
+      const ticket = await Ticket.findOne({
+        _id: req.params.id,
+        assignedWorker: req.user.userId,
+      });
+
+      if (!ticket) {
+        return res.status(404).json({
+          message: "Request not found or not assigned to you",
+        });
+      }
+
+      if (ticket.status !== "Accepted") {
+        return res.status(400).json({
+          message: "Only accepted requests can be started",
+        });
+      }
+
+      ticket.status = "In Progress";
+
+      await ticket.save();
+
+      res.status(200).json({
+        message: "Request is now in progress",
+        ticket,
+      });
+    } catch (error) {
+      console.error("Start request error:", error);
+
+      res.status(500).json({
+        message: "Failed to start request",
+      });
+    }
+  }
+);
+
+
+// Complete Request
+router.put(
+  "/:id/complete",
   authMiddleware,
   roleMiddleware("worker"),
   async (req, res) => {
@@ -343,30 +490,30 @@ router.put(
 
       if (!ticket) {
         return res.status(404).json({
-          message: "Ticket not found or not assigned to you",
+          message: "Request not found or not assigned to you",
         });
       }
 
       if (ticket.status !== "In Progress") {
         return res.status(400).json({
-          message: "Only in-progress tickets can be resolved",
+          message: "Only in-progress requests can be completed",
         });
       }
 
-      ticket.status = "Resolved";
+      ticket.status = "Completed";
       ticket.resolutionNote = resolutionNote?.trim() || "";
 
       await ticket.save();
 
       res.status(200).json({
-        message: "Ticket resolved successfully",
+        message: "Request completed successfully",
         ticket,
       });
     } catch (error) {
-      console.error("Resolve ticket error:", error);
+      console.error("Complete request error:", error);
 
       res.status(500).json({
-        message: "Failed to resolve ticket",
+        message: "Failed to complete request",
       });
     }
   }
