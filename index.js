@@ -1,10 +1,13 @@
+const ticketRoutes = require("./routes/ticketRoutes");
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
-
+app.use("/api/auth", authRoutes);
+app.use("/api/tickets", ticketRoutes);
 const app = express();
 
 app.use(cors());
