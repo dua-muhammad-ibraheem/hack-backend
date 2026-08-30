@@ -1,57 +1,49 @@
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+require('dotenv').config();
 
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
-require("dotenv").config();
-
-const authRoutes = require("./routes/authRoutes");
-const ticketRoutes = require("./routes/ticketRoutes");
-const userRoutes = require("./routes/userRoutes");
+const authRoutes = require('./routes/authRoutes');
+const ticketRoutes = require('./routes/ticketRoutes');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.send("Backend Server Running");
+app.get('/', (req, res) => {
+  res.send('Backend Server Running');
 });
 
-// MongoDB connection
+// Cached connection state — avoids reconnecting on every serverless invocation
 let isConnected = false;
 
 const connectDB = async () => {
   if (isConnected) return;
 
   await mongoose.connect(process.env.MONGODB_URI);
-
   isConnected = true;
-
-  console.log("MongoDB Connected");
+  console.log('MongoDB Connected');
 };
 
-// Connect DB before API requests
-app.use(async (req, res, next) => {
+// Ensure DB is connected before any /api request is handled.
+// This fixes cold-start "buffering timed out" errors on Vercel.
+app.use('/api', async (req, res, next) => {
   try {
     await connectDB();
     next();
   } catch (error) {
-    console.error("MongoDB connection failed:", error);
-
-    res.status(500).json({
-      message: "Database connection failed",
-    });
+    console.error('MongoDB connection failed:', error);
+    res.status(500).json({ message: 'Database connection failed' });
   }
 });
 
-// Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/tickets", ticketRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/tickets', ticketRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-// Local development
+// app.listen() only runs locally — Vercel manages the server itself via the export below
 if (require.main === module) {
   connectDB()
     .then(() => {
@@ -60,9 +52,8 @@ if (require.main === module) {
       });
     })
     .catch((error) => {
-      console.error("MongoDB connection failed:", error);
+      console.error('MongoDB connection failed:', error);
     });
 }
 
 module.exports = app;
-
