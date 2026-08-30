@@ -48,31 +48,44 @@ router.get(
 // =====================================================
 
 router.get(
-  "/worker",
+  "/workers",
   authMiddleware,
-  roleMiddleware("worker"),
+  roleMiddleware("customer"),
   async (req, res) => {
     try {
-      const tickets = await Ticket.find({
-        assignedAgent: req.user.userId,
-      })
-        .populate("customer", "name email")
-        .sort({ createdAt: -1 });
+      const { category } = req.query;
+
+      const filter = {
+        role: "worker",
+      };
+
+      if (category) {
+        filter.category = category;
+      }
+
+      const workers = await User.find(
+        filter,
+        {
+          name: 1,
+          email: 1,
+          category: 1,
+        }
+      )
+        .sort({ name: 1 })
+        .limit(2);
 
       res.status(200).json({
-        tickets,
+        workers,
       });
     } catch (error) {
-      console.error("Fetch worker tickets error:", error);
+      console.error("Fetch workers error:", error);
 
       res.status(500).json({
-        message: "Failed to fetch requests",
+        message: "Failed to fetch workers",
       });
     }
   }
 );
-
-
 // =====================================================
 // ACCEPT REQUEST
 // Assigned → In Progress

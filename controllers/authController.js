@@ -202,11 +202,25 @@ const createAdmin = async (req, res) => {
 // =========================
 const createWorker = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, category } = req.body;
 
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !category) {
       return res.status(400).json({
-        message: "Name, email and password are required",
+        message: "Name, email, password and category are required",
+      });
+    }
+
+    const allowedCategories = [
+      "Billing",
+      "Account",
+      "Technical",
+      "Orders",
+      "General",
+    ];
+
+    if (!allowedCategories.includes(category)) {
+      return res.status(400).json({
+        message: "Invalid worker category",
       });
     }
 
@@ -233,6 +247,7 @@ const createWorker = async (req, res) => {
       email: email.toLowerCase().trim(),
       password: hashedPassword,
       role: "worker",
+      category,
     });
 
     res.status(201).json({
@@ -242,6 +257,7 @@ const createWorker = async (req, res) => {
         name: worker.name,
         email: worker.email,
         role: worker.role,
+        category: worker.category,
       },
     });
   } catch (error) {
@@ -253,7 +269,6 @@ const createWorker = async (req, res) => {
     });
   }
 };
-
 
 module.exports = {
   registerUser,

@@ -1,4 +1,3 @@
-
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
@@ -28,6 +27,14 @@ const userSchema = new mongoose.Schema(
       enum: ["customer", "worker", "admin"],
       default: "customer",
     },
+
+    category: {
+      type: String,
+      enum: ["Billing", "Account", "Technical", "Orders", "General"],
+      required: function () {
+        return this.role === "worker";
+      },
+    },
   },
   {
     timestamps: true,
@@ -35,4 +42,3 @@ const userSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model("User", userSchema);
-
