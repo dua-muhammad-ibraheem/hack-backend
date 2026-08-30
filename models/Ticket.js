@@ -1,5 +1,23 @@
-
 const mongoose = require("mongoose");
+
+const replySchema = new mongoose.Schema(
+  {
+    sender: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    message: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
 
 const ticketSchema = new mongoose.Schema(
   {
@@ -35,9 +53,15 @@ const ticketSchema = new mongoose.Schema(
       default: "Medium",
     },
 
+    aiSummary: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
     status: {
       type: String,
-      enum: ["New", "Assigned", "In Progress", "Completed"],
+      enum: ["New", "Assigned", "In Progress", "Resolved"],
       default: "New",
     },
 
@@ -58,6 +82,8 @@ const ticketSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+
+    replies: [replySchema],
   },
   {
     timestamps: true,
@@ -65,4 +91,3 @@ const ticketSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model("Ticket", ticketSchema);
-

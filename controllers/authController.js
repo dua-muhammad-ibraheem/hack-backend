@@ -1,14 +1,13 @@
-
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 // =========================
-// Register Customer
+// Register Customer / Worker / Admin
 // =========================
 const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -21,6 +20,9 @@ const registerUser = async (req, res) => {
         message: "Password must be at least 6 characters long",
       });
     }
+
+    const allowedRoles = ["customer", "worker", "admin"];
+    const finalRole = allowedRoles.includes(role) ? role : "customer";
 
     const existingUser = await User.findOne({
       email: email.toLowerCase().trim(),
@@ -38,7 +40,7 @@ const registerUser = async (req, res) => {
       name: name.trim(),
       email: email.toLowerCase().trim(),
       password: hashedPassword,
-      role: "customer",
+      role: finalRole,
     });
 
     res.status(201).json({
@@ -132,7 +134,6 @@ const loginUser = async (req, res) => {
 // =========================
 const createAdmin = async (req, res) => {
   try {
-    // Only allow this when no admin exists
     const existingAdmin = await User.findOne({
       role: "admin",
     });
