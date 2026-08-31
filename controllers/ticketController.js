@@ -190,7 +190,7 @@ const acceptTicket = async (req, res) => {
       });
     }
 
-    const { category, priority, summary } = req.body;
+    const { category, priority, summary } = req.body || {};
 
     if (category) ticket.category = category;
     if (priority) ticket.priority = priority;
