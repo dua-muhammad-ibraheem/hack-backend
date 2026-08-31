@@ -64,10 +64,23 @@ const createTicket = async (req, res) => {
 // =====================================================
 const getWorkers = async (req, res) => {
   try {
-    const workers = await User.find(
-      { role: "worker" },
-      { name: 1, email: 1 }
-    ).sort({ name: 1 });
+    const { category } = req.query;
+
+    const filter = { role: "worker" };
+
+    if (category) {
+      filter.specialization = category;
+    }
+
+    let query = User.find(filter, { name: 1, email: 1, specialization: 1 }).sort({
+      name: 1,
+    });
+
+    if (category) {
+      query = query.limit(2);
+    }
+
+    const workers = await query;
 
     res.status(200).json({ workers });
   } catch (error) {
