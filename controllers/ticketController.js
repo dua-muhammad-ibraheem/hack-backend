@@ -77,7 +77,7 @@ const getWorkers = async (req, res) => {
     });
 
     if (category) {
-      query = query.limit(2);
+    query = query.limit(3);
     }
 
     const workers = await query;
