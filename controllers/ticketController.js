@@ -10,7 +10,7 @@ const generateTicketNumber = () => {
 // =====================================================
 const createTicket = async (req, res) => {
   try {
-    const { subject, description, category, assignedAgent } = req.body;
+    const { subject, description, category, assignedWorker } = req.body;
 
     if (!subject || !description || !category) {
       return res.status(400).json({
@@ -18,11 +18,11 @@ const createTicket = async (req, res) => {
       });
     }
 
-    let assignedWorker = null;
+    let workerId = null;
 
-    if (assignedAgent) {
+    if (assignedWorker) {
       const worker = await User.findOne({
-        _id: assignedAgent,
+        _id: assignedWorker,
         role: "worker",
       });
 
@@ -32,7 +32,7 @@ const createTicket = async (req, res) => {
         });
       }
 
-      assignedWorker = worker._id;
+      workerId = worker._id;
     }
 
     const ticket = await Ticket.create({
@@ -41,8 +41,8 @@ const createTicket = async (req, res) => {
       description: description.trim(),
       category,
       customer: req.user.userId,
-      assignedWorker,
-      status: assignedWorker ? "Assigned" : "New",
+      assignedWorker: workerId,
+      status: workerId ? "Assigned" : "New",
     });
 
     res.status(201).json({
@@ -58,40 +58,6 @@ const createTicket = async (req, res) => {
     });
   }
 };
-
-// =====================================================
-// GET WORKERS (for the customer's create-ticket dropdown)
-// =====================================================
-const getWorkers = async (req, res) => {
-  try {
-    const { category } = req.query;
-
-    const filter = { role: "worker" };
-
-    if (category) {
-      filter.specialization = category;
-    }
-
-    let query = User.find(filter, { name: 1, email: 1, specialization: 1 }).sort({
-      name: 1,
-    });
-
-    if (category) {
-    query = query.limit(3);
-    }
-
-    const workers = await query;
-
-    res.status(200).json({ workers });
-  } catch (error) {
-    console.error("Fetch workers error:", error);
-
-    res.status(500).json({
-      message: "Failed to fetch workers",
-    });
-  }
-};
-
 // =====================================================
 // GET MY TICKETS (customer)
 // =====================================================
@@ -332,6 +298,61 @@ const addReply = async (req, res) => {
 
     res.status(500).json({
       message: "Failed to send reply",
+    });
+  }
+};
+
+// =====================================================
+// ADD REVIEW (customer, only after ticket is Resolved)
+// =====================================================
+const addReview = async (req, res) => {
+  try {
+    const { rating, comment } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({
+        message: "Please provide a rating between 1 and 5",
+      });
+    }
+
+    const ticket = await Ticket.findById(req.params.id);
+
+    if (!ticket) {
+      return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    if (ticket.customer.toString() !== req.user.userId) {
+      return res.status(403).json({
+        message: "Only the ticket owner can leave a review",
+      });
+    }
+
+    if (ticket.status !== "Resolved") {
+      return res.status(400).json({
+        message: "You can only review a resolved ticket",
+      });
+    }
+
+    if (ticket.rating) {
+      return res.status(400).json({
+        message: "This ticket has already been reviewed",
+      });
+    }
+
+    ticket.rating = rating;
+    ticket.reviewComment = comment ? comment.trim() : "";
+
+    await ticket.save();
+
+    res.status(200).json({
+      message: "Review submitted",
+      ticket,
+    });
+  } catch (error) {
+    console.error("Add review error:", error);
+
+    res.status(500).json({
+      message: "Failed to submit review",
     });
   }
 };

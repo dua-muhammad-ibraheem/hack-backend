@@ -53,6 +53,7 @@ const ticketSchema = new mongoose.Schema(
       default: "Medium",
     },
 
+    // AI-generated (or worker-edited) short summary of the issue
     aiSummary: {
       type: String,
       default: "",
@@ -78,6 +79,19 @@ const ticketSchema = new mongoose.Schema(
     },
 
     resolutionNote: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    rating: {
+      type: Number,
+      min: 1,
+      max: 5,
+      default: null,
+    },
+
+    reviewComment: {
       type: String,
       default: "",
       trim: true,
