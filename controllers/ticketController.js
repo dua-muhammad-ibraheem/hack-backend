@@ -10,7 +10,7 @@ const generateTicketNumber = () => {
 // =====================================================
 const createTicket = async (req, res) => {
   try {
-    const { subject, description, category, assignedWorker } = req.body;
+    const { subject, description, category, assignedAgent } = req.body;
 
     if (!subject || !description || !category) {
       return res.status(400).json({
@@ -20,9 +20,9 @@ const createTicket = async (req, res) => {
 
     let workerId = null;
 
-    if (assignedWorker) {
+    if (assignedAgent) {
       const worker = await User.findOne({
-        _id: assignedWorker,
+        _id: assignedAgent,
         role: "worker",
       });
 
@@ -58,6 +58,40 @@ const createTicket = async (req, res) => {
     });
   }
 };
+
+// =====================================================
+// GET WORKERS (for the customer's create-ticket dropdown)
+// =====================================================
+const getWorkers = async (req, res) => {
+  try {
+    const { category } = req.query;
+
+    const filter = { role: "worker" };
+
+    if (category) {
+      filter.specialization = category;
+    }
+
+    let query = User.find(filter, { name: 1, email: 1, specialization: 1 }).sort({
+      name: 1,
+    });
+
+    if (category) {
+      query = query.limit(3);
+    }
+
+    const workers = await query;
+
+    res.status(200).json({ workers });
+  } catch (error) {
+    console.error("Fetch workers error:", error);
+
+    res.status(500).json({
+      message: "Failed to fetch workers",
+    });
+  }
+};
+
 // =====================================================
 // GET MY TICKETS (customer)
 // =====================================================
@@ -367,4 +401,5 @@ module.exports = {
   rejectTicket,
   completeTicket,
   addReply,
+  addReview,
 };
