@@ -13,6 +13,7 @@ const {
   rejectTicket,
   completeTicket,
   addReply,
+  addReview,
 } = require("../controllers/ticketController");
 
 const router = express.Router();
@@ -34,6 +35,8 @@ router.delete("/:id/reject", authMiddleware, roleMiddleware("worker"), rejectTic
 router.patch("/:id/complete", authMiddleware, roleMiddleware("worker"), completeTicket);
 
 router.post("/:id/replies", authMiddleware, addReply);
+
+router.post("/:id/review", authMiddleware, addReview);
 
 router.get("/:id", authMiddleware, getTicketById);
 
