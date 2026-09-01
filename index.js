@@ -5,6 +5,7 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/authRoutes');
 const ticketRoutes = require('./routes/ticketRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
@@ -15,19 +16,15 @@ app.get('/', (req, res) => {
   res.send('Backend Server Running');
 });
 
-// Cached connection state — avoids reconnecting on every serverless invocation
 let isConnected = false;
 
 const connectDB = async () => {
   if (isConnected) return;
-
   await mongoose.connect(process.env.MONGODB_URI);
   isConnected = true;
   console.log('MongoDB Connected');
 };
 
-// Ensure DB is connected before any /api request is handled.
-// This fixes cold-start "buffering timed out" errors on Vercel.
 app.use('/api', async (req, res, next) => {
   try {
     await connectDB();
@@ -40,10 +37,10 @@ app.use('/api', async (req, res, next) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/tickets', ticketRoutes);
+app.use('/api/users', userRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-// app.listen() only runs locally — Vercel manages the server itself via the export below
 if (require.main === module) {
   connectDB()
     .then(() => {

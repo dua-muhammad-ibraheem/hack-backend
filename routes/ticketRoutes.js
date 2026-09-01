@@ -14,23 +14,20 @@ const {
   completeTicket,
   addReply,
   addReview,
-  addReview,
   getAllTickets,
 } = require("../controllers/ticketController");
 
 const router = express.Router();
 
-// Specific routes first (before /:id) so they aren't swallowed by it
-
 router.post("/", authMiddleware, roleMiddleware("customer"), createTicket);
-
-router.get("/admin/all", authMiddleware, roleMiddleware("admin"), getAllTickets);
 
 router.get("/workers", authMiddleware, roleMiddleware("customer"), getWorkers);
 
 router.get("/my", authMiddleware, roleMiddleware("customer"), getMyTickets);
 
 router.get("/worker", authMiddleware, roleMiddleware("worker"), getWorkerTickets);
+
+router.get("/admin/all", authMiddleware, roleMiddleware("admin"), getAllTickets);
 
 router.patch("/:id/accept", authMiddleware, roleMiddleware("worker"), acceptTicket);
 
