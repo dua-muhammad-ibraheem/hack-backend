@@ -1,4 +1,3 @@
-
 const express = require("express");
 
 const User = require("../models/User");
@@ -7,12 +6,9 @@ const roleMiddleware = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
-// Get workers by specialization
-// Example: /api/users/workers?specialization=Technical
-
 router.get("/", authMiddleware, roleMiddleware("admin"), async (req, res) => {
   try {
-    const users = await User.find({}, { name: 1, email: 1, role: 1 }).sort({
+    const users = await User.find({}, { name: 1, email: 1, role: 1, specialization: 1 }).sort({
       role: 1,
     });
     res.status(200).json({ users });
@@ -49,7 +45,6 @@ router.get("/workers", authMiddleware, async (req, res) => {
   }
 });
 
-// Admin creates a worker
 router.post(
   "/workers",
   authMiddleware,
@@ -119,5 +114,25 @@ router.post(
   }
 );
 
-module.exports = router;
+// Admin deletes a user account (cannot delete another admin)
+router.delete("/:id", authMiddleware, roleMiddleware("admin"), async (req, res) => {
+  try {
+    const targetUser = await User.findById(req.params.id);
 
+    if (!targetUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (targetUser.role === "admin") {
+      return res.status(403).json({ message: "Cannot delete an admin account" });
+    }
+
+    await User.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete user" });
+  }
+});
+
+module.exports = router;
