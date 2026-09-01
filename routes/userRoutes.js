@@ -9,6 +9,18 @@ const router = express.Router();
 
 // Get workers by specialization
 // Example: /api/users/workers?specialization=Technical
+
+router.get("/", authMiddleware, roleMiddleware("admin"), async (req, res) => {
+  try {
+    const users = await User.find({}, { name: 1, email: 1, role: 1 }).sort({
+      role: 1,
+    });
+    res.status(200).json({ users });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch users" });
+  }
+});
+
 router.get("/workers", authMiddleware, async (req, res) => {
   try {
     const { specialization } = req.query;

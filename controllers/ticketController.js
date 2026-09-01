@@ -391,6 +391,23 @@ const addReview = async (req, res) => {
   }
 };
 
+// =====================================================
+// GET ALL TICKETS (admin)
+// =====================================================
+const getAllTickets = async (req, res) => {
+  try {
+    const tickets = await Ticket.find()
+      .populate("customer", "name email")
+      .populate("assignedWorker", "name email")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ tickets });
+  } catch (error) {
+    console.error("Fetch all tickets error:", error);
+    res.status(500).json({ message: "Failed to fetch tickets" });
+  }
+};
+
 module.exports = {
   createTicket,
   getWorkers,
@@ -402,4 +419,5 @@ module.exports = {
   completeTicket,
   addReply,
   addReview,
+  getAllTickets,
 };
